@@ -1,0 +1,136 @@
+%Author Vaibhav Gupta
+%importJava Libraries
+import java.awt.Robot;
+import java.awt.event.*;
+mouse = Robot;
+
+clc;
+
+%setting centre of the live view screen
+ro=120;
+co=160;
+
+%setting centre for the display screen
+rs=800/2;
+cs=1280/2;
+
+%take base image for processing the environments (using image subtraction) and selecting the feature extractor color
+vid = videoinput('winvideo',1,'YUY2_320x240');
+set(vid,'TriggerRepeat',Inf);
+vid.FrameGrabinterval = 1;
+set(vid,'ReturnedColorSpace','rgb');
+
+start(vid);
+pause(2);
+
+%selecting the indentifier pixel to extract the key color
+g=getsnapshot(vid);
+p=impixel(g);
+disp(p);
+close;
+
+%extracting the rgb values for the identifier color
+yo=(0.257*p(1))+(0.504*p(2))+(0.098*p(3))+16;
+disp(yo);
+cbo=(-0.148*p(1))+(-0.291*p(2))+(0.439*p(3))+128;
+disp(cbo);
+cro=(0.439*p(1))+(-0.368*p(2))+(-0.071*p(3))+128;
+disp(cro);
+pause(1);
+ftm=0;
+
+while(vid.FramesAcquired<=10000)
+    pause(.0005);
+    #extract the image from live streaming
+    im = getsnapshot(vid);          
+    #extract the image from live streaming
+    im=rgb2ycbcr(im);
+
+    #extract the position of the colors wrt pixels of the image
+    f=0;
+    kk=0;   
+    f1=0;
+    j=0;
+        while(j<size(im,2))
+            j=j+1;
+   
+             for i = 1:size(im,1)
+
+                cb=im(i,j,2);
+                cr=im(i,j,3);
+       
+               if(cr>(cro-12) && cr<(cro+12) && cb>(cbo-12) && cb<(cbo+12))
+     
+                    f=f+1;
+                    rc(f,1)=i;
+                    rc(f,2)=j;
+                    j=j+40;
+                     if(j>size(im,2))
+                        j=j-40;
+                        kk=1;
+                        break
+                     end
+                 end
+             end
+       
+        if(kk==1)
+            break
+        end
+     end
+
+    #based on the identified positions of the color pixels, perform the operation on the mouse cursor/click
+    if(f==1)
+        mouse.mouseRelease(InputEvent.BUTTON1_MASK);
+        r=rc(1,1);
+        c=rc(1,2);
+        if(ftm==1 && abs(r-r1)>1 && abs(c-c1)>1)
+        r1 = r;
+        c1 = c;
+        r=((r-ro)*10.89)+rs;
+        c=((co-c)*13.2)+cs;
+        mouse.mouseMove(c,r);    
+        end
+        
+        if (ftm==0)
+        r1 = r;
+        c1 = c;
+        ftm=1;
+        end
+   end
+
+    if(f==2)
+        mouse.mouseRelease(InputEvent.BUTTON1_MASK);
+        r1=rc(1,1);
+        c1=rc(1,2);
+        r2=rc(2,1);
+        c2=rc(2,2);
+        
+    if(abs(r1-r2)<15)   
+         mouse.mousePress(InputEvent.BUTTON3_MASK);
+         mouse.mouseRelease(InputEvent.BUTTON3_MASK);
+         pause(0.2);
+     end
+
+     if(abs(r1-r2)>25)       
+         mouse.mousePress(InputEvent.BUTTON1_MASK);
+         mouse.mouseRelease(InputEvent.BUTTON1_MASK);
+         pause(0.2);
+     end
+     
+    end
+
+   if(f==3)
+    r=rc(2,1);
+    c=rc(2,2);
+    r=((r-ro)*10.89)+rs;
+    c=((co-c)*13.2)+cs;
+    mouse.mousePress(InputEvent.BUTTON1_MASK);
+    mouse.mouseMove(c,r);    
+    dr=1;
+   end
+       
+im=ycbcr2rgb(im);
+imshow(im);
+end
+stop(vid);
+delete(vid);
